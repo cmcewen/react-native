@@ -99,7 +99,7 @@ public class PermissionsModule extends ReactContextBaseJavaModule implements Per
 
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
         promise.resolve(activity.checkPermission(permission, Process.myPid(), Process.myUid()) ==
-                PackageManager.PERMISSION_GRANTED);
+          PackageManager.PERMISSION_GRANTED);
         return;
       }
       if (activity.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED) {
@@ -108,12 +108,13 @@ public class PermissionsModule extends ReactContextBaseJavaModule implements Per
       }
 
       mCallbacks.put(
-          mRequestCode, new Callback() {
-            @Override
-            public void invoke(Object... args) {
-              promise.resolve(args[0].equals(PackageManager.PERMISSION_GRANTED));
-            }
-          });
+        mRequestCode, new Callback() {
+          @Override
+          public void invoke(Object... args) {
+            int[] results = (int[]) args[0];
+            promise.resolve(results[0] == PackageManager.PERMISSION_GRANTED);
+          }
+        });
 
       activity.requestPermissions(new String[]{permission}, mRequestCode, this);
       mRequestCode++;
@@ -154,10 +155,11 @@ public class PermissionsModule extends ReactContextBaseJavaModule implements Per
         mRequestCode, new Callback() {
           @Override
           public void invoke(Object... args) {
+            int[] results = (int[]) args[0];
             for (int j=0; j<permissionsToCheck.size(); j++) {
-              grantedPermissions.putBoolean(permissionsToCheck.get(j), args[j].equals(PackageManager.PERMISSION_GRANTED));
+              grantedPermissions.putBoolean(permissionsToCheck.get(j), results[j] == PackageManager.PERMISSION_GRANTED);
             }
-            promise.resolve(permissionsToCheck);
+            promise.resolve(grantedPermissions);
           }
         });
 
@@ -173,10 +175,10 @@ public class PermissionsModule extends ReactContextBaseJavaModule implements Per
    */
   @Override
   public boolean onRequestPermissionsResult(
-      int requestCode,
-      String[] permissions,
-      int[] grantResults) {
-    mCallbacks.get(requestCode).invoke(grantResults[0]);
+    int requestCode,
+    String[] permissions,
+    int[] grantResults) {
+    mCallbacks.get(requestCode).invoke(grantResults);
     mCallbacks.remove(requestCode);
     return mCallbacks.size() == 0;
   }
@@ -185,10 +187,10 @@ public class PermissionsModule extends ReactContextBaseJavaModule implements Per
     Activity activity = getCurrentActivity();
     if (activity == null) {
       throw new IllegalStateException("Tried to use permissions API while not attached to an " +
-          "Activity.");
+        "Activity.");
     } else if (!(activity instanceof PermissionAwareActivity)) {
       throw new IllegalStateException("Tried to use permissions API but the host Activity doesn't" +
-          " implement PermissionAwareActivity.");
+        " implement PermissionAwareActivity.");
     }
     return (PermissionAwareActivity) activity;
   }
