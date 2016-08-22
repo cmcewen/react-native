@@ -1,5 +1,3 @@
-// Copyright 2015-present Facebook. All Rights Reserved.
-
 apply plugin: 'com.android.library'
 apply plugin: 'maven'
 
@@ -200,6 +198,9 @@ task buildReactNdkLib(dependsOn: [prepareJSC, prepareBoost, prepareDoubleConvers
 
 task cleanReactNdkLib(type: Exec) {
     commandLine getNdkBuildFullPath(),
+            "NDK_APPLICATION_MK=$projectDir/src/main/jni/Application.mk",
+            "THIRD_PARTY_NDK_DIR=$buildDir/third-party-ndk",
+            "REACT_COMMON_DIR=$projectDir/../ReactCommon",
             '-C', file('src/main/jni/react/jni').absolutePath,
             'clean'
 }
@@ -217,7 +218,7 @@ task packageReactNdkLibsForBuck(dependsOn: packageReactNdkLibs, type: Copy) {
 
 android {
     compileSdkVersion 23
-    buildToolsVersion "23.0.1"
+    buildToolsVersion "23.0.3"
 
     defaultConfig {
         minSdkVersion 16
@@ -240,7 +241,7 @@ android {
         jniLibs.srcDir "$buildDir/react-ndk/exported"
         res.srcDirs = ['src/main/res/devsupport', 'src/main/res/shell', 'src/main/res/views/modal']
         java {
-          srcDirs = ['src/main/java', 'src/main/libraries/soloader/java']
+          srcDirs = ['src/main/java', 'src/main/libraries/soloader']
           exclude 'com/facebook/react/processing'
         }
     }
@@ -253,10 +254,6 @@ android {
 
     lintOptions {
         abortOnError false
-    }
-    packagingOptions {
-        exclude 'META-INF/NOTICE'
-        exclude 'META-INF/LICENSE'
     }
 }
 
@@ -288,3 +285,4 @@ dependencies {
 }
 
 apply from: 'release.gradle'
+
