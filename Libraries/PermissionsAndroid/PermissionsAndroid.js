@@ -61,6 +61,7 @@ type Rationale = {
 
 class PermissionsAndroid {
   PERMISSIONS: Object;
+  RESULTS: Object;
 
   constructor() {
     /**
