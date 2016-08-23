@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2015-present, Facebook, Inc.
  * All rights reserved.
- *
+ * <p/>
  * This source code is licensed under the BSD-style license found in the
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
@@ -35,6 +35,9 @@ public class PermissionsModule extends ReactContextBaseJavaModule implements Per
 
   private final SparseArray<Callback> mCallbacks;
   private int mRequestCode = 0;
+  private final String PERMISSION_GRANTED = "PERMISSION_GRANTED";
+  private final String PERMISSION_DENIED = "PERMISSION_DENIED";
+  private final String PERMISSION_NEVER_ASK_AGAIN = "PERMISSION_NEVER_ASK_AGAIN";
 
   public PermissionsModule(ReactApplicationContext reactContext) {
     super(reactContext);
@@ -52,17 +55,12 @@ public class PermissionsModule extends ReactContextBaseJavaModule implements Per
    */
   @ReactMethod
   public void checkPermission(final String permission, final Promise promise) {
-    try {
-      PermissionAwareActivity activity = getPermissionAwareActivity();
-      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-        promise.resolve(activity.checkPermission(permission, Process.myPid(), Process.myUid()) ==
-          PackageManager.PERMISSION_GRANTED);
-        return;
-      }
-      promise.resolve(activity.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED);
-    } catch (Exception e) {
-      promise.reject(e.getMessage());
+    PermissionAwareActivity activity = getPermissionAwareActivity();
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+      promise.resolve(activity.checkPermission(permission, Process.myPid(), Process.myUid()) == PackageManager.PERMISSION_GRANTED);
+      return;
     }
+    promise.resolve(activity.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED);
   }
 
   /**
@@ -75,15 +73,11 @@ public class PermissionsModule extends ReactContextBaseJavaModule implements Per
    */
   @ReactMethod
   public void shouldShowRequestPermissionRationale(final String permission, final Promise promise) {
-    try {
-      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-        promise.resolve(false);
-        return;
-      }
-      promise.resolve(getPermissionAwareActivity().shouldShowRequestPermissionRationale(permission));
-    } catch (Exception e) {
-      promise.reject(e.getMessage());
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+      promise.resolve(false);
+      return;
     }
+    promise.resolve(getPermissionAwareActivity().shouldShowRequestPermissionRationale(permission));
   }
 
   /**
@@ -94,80 +88,91 @@ public class PermissionsModule extends ReactContextBaseJavaModule implements Per
    */
   @ReactMethod
   public void requestPermission(final String permission, final Promise promise) {
-    try {
-      PermissionAwareActivity activity = getPermissionAwareActivity();
+    PermissionAwareActivity activity = getPermissionAwareActivity();
 
-      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-        promise.resolve(activity.checkPermission(permission, Process.myPid(), Process.myUid()) ==
-          PackageManager.PERMISSION_GRANTED);
-        return;
-      }
-      if (activity.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED) {
-        promise.resolve(true);
-        return;
-      }
-
-      mCallbacks.put(
-        mRequestCode, new Callback() {
-          @Override
-          public void invoke(Object... args) {
-            int[] results = (int[]) args[0];
-            promise.resolve(results[0] == PackageManager.PERMISSION_GRANTED);
-          }
-        });
-
-      activity.requestPermissions(new String[]{permission}, mRequestCode, this);
-      mRequestCode++;
-    } catch (Exception e) {
-      promise.reject(e.getMessage());
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+      promise.resolve(activity.checkPermission(permission, Process.myPid(), Process.myUid()) ==
+        PackageManager.PERMISSION_GRANTED ? PERMISSION_GRANTED : PERMISSION_DENIED);
+      return;
     }
+    if (activity.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED) {
+      promise.resolve(PERMISSION_GRANTED);
+      return;
+    }
+
+    mCallbacks.put(
+      mRequestCode, new Callback() {
+        @Override
+        public void invoke(Object... args) {
+          int[] results = (int[]) args[0];
+          if (results[0] == PackageManager.PERMISSION_GRANTED) {
+            promise.resolve(PERMISSION_GRANTED);
+          } else {
+            PermissionAwareActivity activity = (PermissionAwareActivity) args[1];
+            if (activity.shouldShowRequestPermissionRationale(permission)) {
+              promise.resolve(PERMISSION_DENIED);
+            } else {
+              promise.resolve(PERMISSION_NEVER_ASK_AGAIN);
+            }
+          }
+        }
+      });
+
+    activity.requestPermissions(new String[]{permission}, mRequestCode, this);
+    mRequestCode++;
   }
 
   @ReactMethod
   public void requestMultiplePermissions(final ReadableArray permissions, final Promise promise) {
-    try {
-      PermissionAwareActivity activity = getPermissionAwareActivity();
-      final WritableMap grantedPermissions = new WritableNativeMap();
-      final ArrayList<String> permissionsToCheck = new ArrayList<String>();
-      int checkedPermissionsCount = 0;
+    PermissionAwareActivity activity = getPermissionAwareActivity();
+    final WritableMap grantedPermissions = new WritableNativeMap();
+    final ArrayList<String> permissionsToCheck = new ArrayList<String>();
+    int checkedPermissionsCount = 0;
 
-      for (int i=0; i<permissions.size(); i++) {
-        String perm = permissions.getString(i);
+    for (int i = 0; i < permissions.size(); i++) {
+      String perm = permissions.getString(i);
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-          grantedPermissions.putBoolean(perm, activity.checkPermission(perm, Process.myPid(), Process.myUid()) ==
-            PackageManager.PERMISSION_GRANTED);
-          checkedPermissionsCount++;
-        } else if (activity.checkSelfPermission(perm) == PackageManager.PERMISSION_GRANTED) {
-          grantedPermissions.putBoolean(perm, true);
-          checkedPermissionsCount++;
-        } else {
-          permissionsToCheck.add(perm);
-        }
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+        grantedPermissions.putString(perm, activity.checkPermission(perm, Process.myPid(), Process.myUid()) ==
+          PackageManager.PERMISSION_GRANTED ? PERMISSION_GRANTED : PERMISSION_DENIED);
+        checkedPermissionsCount++;
+      } else if (activity.checkSelfPermission(perm) == PackageManager.PERMISSION_GRANTED) {
+        grantedPermissions.putString(perm, PERMISSION_GRANTED);
+        checkedPermissionsCount++;
+      } else {
+        permissionsToCheck.add(perm);
       }
-      if (permissions.size() == checkedPermissionsCount) {
-        promise.resolve(grantedPermissions);
-        return;
-      }
-
-
-      mCallbacks.put(
-        mRequestCode, new Callback() {
-          @Override
-          public void invoke(Object... args) {
-            int[] results = (int[]) args[0];
-            for (int j=0; j<permissionsToCheck.size(); j++) {
-              grantedPermissions.putBoolean(permissionsToCheck.get(j), results[j] == PackageManager.PERMISSION_GRANTED);
-            }
-            promise.resolve(grantedPermissions);
-          }
-        });
-
-      activity.requestPermissions(permissionsToCheck.toArray(new String[0]), mRequestCode, this);
-      mRequestCode++;
-    } catch (Exception e) {
-      promise.reject(e.getMessage());
     }
+    if (permissions.size() == checkedPermissionsCount) {
+      promise.resolve(grantedPermissions);
+      return;
+    }
+
+
+    mCallbacks.put(
+      mRequestCode, new Callback() {
+        @Override
+        public void invoke(Object... args) {
+          int[] results = (int[]) args[0];
+          PermissionAwareActivity activity = (PermissionAwareActivity) args[1];
+          for (int j = 0; j < permissionsToCheck.size(); j++) {
+            String permission = permissionsToCheck.get(j);
+            if (results[j] == PackageManager.PERMISSION_GRANTED) {
+              grantedPermissions.putString(permission, PERMISSION_GRANTED);
+            } else {
+              if (activity.shouldShowRequestPermissionRationale(permission)) {
+                grantedPermissions.putString(permission, PERMISSION_DENIED);
+              } else {
+                grantedPermissions.putString(permission, PERMISSION_NEVER_ASK_AGAIN);
+              }
+            }
+          }
+          promise.resolve(grantedPermissions);
+        }
+      });
+
+    activity.requestPermissions(permissionsToCheck.toArray(new String[0]), mRequestCode, this);
+    mRequestCode++;
   }
 
   /**
@@ -178,7 +183,7 @@ public class PermissionsModule extends ReactContextBaseJavaModule implements Per
     int requestCode,
     String[] permissions,
     int[] grantResults) {
-    mCallbacks.get(requestCode).invoke(grantResults);
+    mCallbacks.get(requestCode).invoke(grantResults, getPermissionAwareActivity());
     mCallbacks.remove(requestCode);
     return mCallbacks.size() == 0;
   }

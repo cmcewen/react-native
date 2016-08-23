@@ -9,10 +9,6 @@
 
 package com.facebook.react;
 
-import javax.annotation.Nullable;
-
-import java.util.List;
-
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Build;
@@ -22,22 +18,26 @@ import android.view.KeyEvent;
 import android.widget.Toast;
 
 import com.facebook.common.logging.FLog;
+import com.facebook.react.bridge.Callback;
 import com.facebook.react.common.ReactConstants;
 import com.facebook.react.devsupport.DoubleTapReloadRecognizer;
 import com.facebook.react.modules.core.DefaultHardwareBackBtnHandler;
 import com.facebook.react.modules.core.PermissionAwareActivity;
 import com.facebook.react.modules.core.PermissionListener;
 
+import javax.annotation.Nullable;
+
 /**
  * Base Activity for React Native applications.
  */
 public abstract class ReactActivity extends Activity
-    implements DefaultHardwareBackBtnHandler, PermissionAwareActivity {
+  implements DefaultHardwareBackBtnHandler, PermissionAwareActivity {
 
   private static final String REDBOX_PERMISSION_MESSAGE =
-      "Overlay permissions needs to be granted in order for react native apps to run in dev mode";
+    "Overlay permissions needs to be granted in order for react native apps to run in dev mode";
 
   private @Nullable PermissionListener mPermissionListener;
+  private @Nullable Callback mPermissionsCallback;
   private @Nullable ReactInstanceManager mReactInstanceManager;
   private @Nullable ReactRootView mReactRootView;
   private DoubleTapReloadRecognizer mDoubleTapReloadRecognizer;
@@ -128,6 +128,11 @@ public abstract class ReactActivity extends Activity
     if (getReactNativeHost().hasInstance()) {
       getReactNativeHost().getReactInstanceManager().onHostResume(this, this);
     }
+
+    if (mPermissionsCallback != null) {
+      mPermissionsCallback.invoke();
+      mPermissionsCallback = null;
+    }
   }
 
   @Override
@@ -188,21 +193,26 @@ public abstract class ReactActivity extends Activity
 
   @Override
   public void requestPermissions(
-      String[] permissions,
-      int requestCode,
-      PermissionListener listener) {
+    String[] permissions,
+    int requestCode,
+    PermissionListener listener) {
     mPermissionListener = listener;
     this.requestPermissions(permissions, requestCode);
   }
 
   @Override
   public void onRequestPermissionsResult(
-      int requestCode,
-      String[] permissions,
-      int[] grantResults) {
-    if (mPermissionListener != null &&
-        mPermissionListener.onRequestPermissionsResult(requestCode, permissions, grantResults)) {
-      mPermissionListener = null;
-    }
+    final int requestCode,
+    final String[] permissions,
+    final int[] grantResults) {
+    mPermissionsCallback = new Callback() {
+      @Override
+      public void invoke(Object... args) {
+        if (mPermissionListener != null &&
+          mPermissionListener.onRequestPermissionsResult(requestCode, permissions, grantResults)) {
+          mPermissionListener = null;
+        }
+      }
+    };
   }
 }
