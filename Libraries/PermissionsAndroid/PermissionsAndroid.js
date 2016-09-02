@@ -61,6 +61,7 @@ type Rationale = {
 
 class PermissionsAndroid {
   PERMISSIONS: Object;
+  RESULTS: Object;
 
   constructor() {
     /**
@@ -91,6 +92,12 @@ class PermissionsAndroid {
       RECEIVE_MMS: 'android.permission.RECEIVE_MMS',
       READ_EXTERNAL_STORAGE: 'android.permission.READ_EXTERNAL_STORAGE',
       WRITE_EXTERNAL_STORAGE: 'android.permission.WRITE_EXTERNAL_STORAGE',
+    };
+
+    this.RESULTS = {
+      PERMISSION_GRANTED: 'PERMISSION_GRANTED',
+      PERMISSION_DENIED: 'PERMISSION_DENIED',
+      PERMISSION_NEVER_ASK_AGAIN: 'PERMISSION_NEVER_ASK_AGAIN',
     };
   }
 
@@ -127,6 +134,10 @@ class PermissionsAndroid {
       }
     }
     return Permissions.requestPermission(permission);
+  }
+
+  requestMultiplePermissions(permissions: Array<string>) : Promise<Object> {
+    return Permissions.requestMultiplePermissions(permissions);
   }
 }
 
