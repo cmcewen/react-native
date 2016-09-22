@@ -157,12 +157,6 @@ var featured = [
     infoTitle: 'The award winning Fantasy Football league manager.',
   },
   {
-    name: 'Codementor - Live 1:1 Expert Developer Help',
-    icon: 'http://a1.mzstatic.com/us/r30/Purple3/v4/db/cf/35/dbcf3523-bac7-0f54-c6a8-a80bf4f43c38/icon175x175.jpeg',
-    infoLink: 'https://techcrunch.com/2015/08/26/codementor-live-classes/',
-    infoTitle: 'Codementor, a Learning Platform for Developers',
-  },
-  {
     name: 'Coiney窓口',
     icon: 'http://a4.mzstatic.com/us/r30/Purple69/v4/c9/bc/3a/c9bc3a29-9c11-868f-b960-ca46d5fcd509/icon175x175.jpeg',
     linkAppStore: 'https://itunes.apple.com/jp/app/coiney-chuang-kou/id1069271336?mt=8',
@@ -320,6 +314,13 @@ var featured = [
     linkAppStore: 'https://itunes.apple.com/cn/app/zuo-ri-re-tui/id1137163693?l=en&mt=8',
     infoLink: 'https://www.zfanw.com/blog/developing-react-native-image-viewer-library.html',
     infoTitle: 'Developing the react-native-image-viewer library',
+  },
+  {
+    name: 'Artsy – Collect and Bid on Fine Art & Design',
+    icon: 'https://raw.githubusercontent.com/artsy/eigen/master/Artsy/Resources/Images.xcassets/AppIcon.appiconset/AppIcon167.png',
+    linkAppStore: 'https://itunes.apple.com/us/app/artsy-collect-bid-on-fine/id703796080?mt=8',
+    infoLink: 'https://artsy.github.io/series/react-native-at-artsy/',
+    infoTitle: 'React Native at Artsy',
   },
 ];
 

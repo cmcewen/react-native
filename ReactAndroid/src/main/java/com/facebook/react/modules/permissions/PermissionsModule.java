@@ -23,6 +23,7 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeMap;
+import com.facebook.react.module.annotations.ReactModule;
 import com.facebook.react.modules.core.PermissionAwareActivity;
 import com.facebook.react.modules.core.PermissionListener;
 
@@ -31,6 +32,7 @@ import java.util.ArrayList;
 /**
  * Module that exposes the Android M Permission system to JS.
  */
+@ReactModule(name = "PermissionsAndroid")
 public class PermissionsModule extends ReactContextBaseJavaModule implements PermissionListener {
 
   private final SparseArray<Callback> mCallbacks;
