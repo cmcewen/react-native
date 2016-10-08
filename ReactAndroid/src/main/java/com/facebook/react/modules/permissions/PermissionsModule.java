@@ -57,7 +57,11 @@ public class PermissionsModule extends ReactContextBaseJavaModule implements Per
    */
   @ReactMethod
   public void checkPermission(final String permission, final Promise promise) {
-    PermissionAwareActivity activity = getPermissionAwareActivity();
+    PermissionAwareActivity activity = getPermissionAwareActivity(getCurrentActivity(), promise);
+    if (activity == null) {
+      return;
+    }
+
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
       promise.resolve(activity.checkPermission(permission, Process.myPid(), Process.myUid()) == PackageManager.PERMISSION_GRANTED);
       return;
@@ -79,7 +83,12 @@ public class PermissionsModule extends ReactContextBaseJavaModule implements Per
       promise.resolve(false);
       return;
     }
-    promise.resolve(getPermissionAwareActivity().shouldShowRequestPermissionRationale(permission));
+    PermissionAwareActivity activity = getPermissionAwareActivity(getCurrentActivity(), promise);
+    if (activity == null) {
+      return;
+    }
+
+    promise.resolve(activity.shouldShowRequestPermissionRationale(permission));
   }
 
   /**
@@ -90,7 +99,10 @@ public class PermissionsModule extends ReactContextBaseJavaModule implements Per
    */
   @ReactMethod
   public void requestPermission(final String permission, final Promise promise) {
-    PermissionAwareActivity activity = getPermissionAwareActivity();
+    PermissionAwareActivity activity = getPermissionAwareActivity(getCurrentActivity(), promise);
+    if (activity == null) {
+      return;
+    }
 
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
       promise.resolve(activity.checkPermission(permission, Process.myPid(), Process.myUid()) ==
@@ -110,7 +122,11 @@ public class PermissionsModule extends ReactContextBaseJavaModule implements Per
           if (results[0] == PackageManager.PERMISSION_GRANTED) {
             promise.resolve(PERMISSION_GRANTED);
           } else {
-            PermissionAwareActivity activity = (PermissionAwareActivity) args[1];
+            PermissionAwareActivity activity = getPermissionAwareActivity((Activity) args[1], promise);
+            if (activity == null) {
+              return;
+            }
+
             if (activity.shouldShowRequestPermissionRationale(permission)) {
               promise.resolve(PERMISSION_DENIED);
             } else {
@@ -126,7 +142,11 @@ public class PermissionsModule extends ReactContextBaseJavaModule implements Per
 
   @ReactMethod
   public void requestMultiplePermissions(final ReadableArray permissions, final Promise promise) {
-    PermissionAwareActivity activity = getPermissionAwareActivity();
+    PermissionAwareActivity activity = getPermissionAwareActivity(getCurrentActivity(), promise);
+    if (activity == null) {
+      return;
+    }
+
     final WritableMap grantedPermissions = new WritableNativeMap();
     final ArrayList<String> permissionsToCheck = new ArrayList<String>();
     int checkedPermissionsCount = 0;
@@ -156,7 +176,11 @@ public class PermissionsModule extends ReactContextBaseJavaModule implements Per
       @Override
       public void invoke(Object... args) {
         int[] results = (int[]) args[0];
-        PermissionAwareActivity activity = (PermissionAwareActivity) args[1];
+        PermissionAwareActivity activity = getPermissionAwareActivity((Activity) args[1], promise);
+        if (activity == null) {
+          return;
+        }
+
         for (int j = 0; j < permissionsToCheck.size(); j++) {
           String permission = permissionsToCheck.get(j);
           if (results[j] == PackageManager.PERMISSION_GRANTED) {
@@ -185,20 +209,19 @@ public class PermissionsModule extends ReactContextBaseJavaModule implements Per
     int requestCode,
     String[] permissions,
     int[] grantResults) {
-      mCallbacks.get(requestCode).invoke(grantResults, getPermissionAwareActivity());
+      mCallbacks.get(requestCode).invoke(grantResults, getCurrentActivity());
       mCallbacks.remove(requestCode);
       return mCallbacks.size() == 0;
   }
 
-  private PermissionAwareActivity getPermissionAwareActivity() {
-    Activity activity = getCurrentActivity();
-    if (activity == null) {
-      throw new IllegalStateException("Tried to use permissions API while not attached to an " +
-          "Activity.");
-    } else if (!(activity instanceof PermissionAwareActivity)) {
-      throw new IllegalStateException("Tried to use permissions API but the host Activity doesn't" +
-          " implement PermissionAwareActivity.");
+  private PermissionAwareActivity getPermissionAwareActivity(Activity currentActivity, Promise promise) {
+    if (currentActivity == null) {
+      promise.reject("E_NO_ACTIVITY", "Tried to use permissions API while not attached to an Activity.");
+      return null;
+    } else if (!(currentActivity instanceof PermissionAwareActivity)) {
+      promise.reject("E_INVALID_ACTIVITY", "Tried to use permissions API but the host Activity doesn't implement PermissionAwareActivity");
+      return null;
     }
-    return (PermissionAwareActivity) activity;
+    return (PermissionAwareActivity) currentActivity;
   }
 }
